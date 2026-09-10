@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Viabilidad 360 · Restaurantes</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* ============================================================
+   VIABILIDAD 360 — TOKENS
+   Tipografía: "Fraunces" (display, para cifras y titulares) +
+   "Inter" (texto e interfaz). Paleta administrativa: azul noche,
+   verde caja, rojo pérdida, ámbar alerta, papel cálido.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root{
+  --azul-noche:#0E2A47;
+  --azul-noche-2:#123457;
+  --verde:#1C7C54;
+  --verde-suave:#DCEFE4;
+  --rojo:#B3372B;
+  --rojo-suave:#F7E2DF;
+  --ambar:#B9791C;
+  --ambar-suave:#F7EAD3;
+  --azul-eq:#2A5FA5;
+  --azul-eq-suave:#DEE9F7;
+  --papel:#F4F1EB;
+  --tarjeta:#FFFFFF;
+  --tinta:#1B2430;
+  --tinta-suave:#5B6472;
+  --borde:#E1DCCF;
+  --sombra: 0 1px 2px rgba(14,42,71,.06), 0 6px 20px rgba(14,42,71,.06);
+  --radio-s:6px;
+  --radio-m:10px;
+  --fdisp:'Fraunces', serif;
+  --ftext:'Inter', sans-serif;
+}
+[data-theme="dark"]{
+  --papel:#12181F;
+  --tarjeta:#1A222C;
+  --tinta:#EDEFF2;
+  --tinta-suave:#9BA5B3;
+  --borde:#2A3441;
+  --verde-suave:#173226;
+  --rojo-suave:#3A1F1C;
+  --ambar-suave:#3A2E14;
+  --azul-eq-suave:#182C42;
+  --sombra: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--ftext);
+  background:var(--papel);
+  color:var(--tinta);
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+h1,h2,h3,.num-display{font-family:var(--fdisp);}
+button{font-family:var(--ftext);}
+input,select,textarea{font-family:var(--ftext);}
+::selection{background:var(--azul-eq-suave);}
+
+/* ---------- layout shell ---------- */
+#shell{display:flex;min-height:100vh;}
+#sidebar{
+  width:230px;flex-shrink:0;background:var(--azul-noche);color:#EAF0F7;
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+#sidebar .brand{padding:22px 20px 14px;border-bottom:1px solid rgba(255,255,255,.1);}
+#sidebar .brand .mark{font-family:var(--fdisp);font-weight:600;font-size:1.28rem;letter-spacing:.2px;color:#fff;}
+#sidebar .brand .sub{font-size:.72rem;color:#9FB2C8;margin-top:2px;}
+nav.navlist{padding:10px 10px;display:flex;flex-direction:column;gap:2px;flex:1;}
+nav.navlist button{
+  all:unset;cursor:pointer;padding:9px 12px;border-radius:var(--radio-s);
+  font-size:.86rem;color:#C6D3E2;display:flex;gap:10px;align-items:center;
+}
+nav.navlist button:hover{background:rgba(255,255,255,.06);color:#fff;}
+nav.navlist button.active{background:#EAF0F7;color:var(--azul-noche);font-weight:600;}
+nav.navlist .grp-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:#728BA5;margin:14px 12px 4px;}
+#sidebar .themebtn{margin:14px 14px 18px;padding:8px 10px;border-radius:var(--radio-s);background:rgba(255,255,255,.07);color:#dfe8f2;border:1px solid rgba(255,255,255,.12);cursor:pointer;font-size:.8rem;}
+
+#main{flex:1;min-width:0;display:flex;flex-direction:column;}
+#topbar{
+  background:var(--tarjeta);border-bottom:1px solid var(--borde);padding:12px 22px;
+  display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;position:sticky;top:0;z-index:20;
+}
+#topbar .biz-select{display:flex;flex-direction:column;gap:2px;min-width:200px;flex:1;}
+#topbar .biz-select label{font-size:.68rem;color:var(--tinta-suave);text-transform:uppercase;letter-spacing:.06em;}
+#topbar select{padding:7px 9px;border-radius:var(--radio-s);border:1px solid var(--borde);background:var(--papel);color:var(--tinta);font-size:.86rem;}
+.topbar-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.btn{
+  border:1px solid var(--borde);background:var(--tarjeta);color:var(--tinta);
+  padding:8px 13px;border-radius:var(--radio-s);font-size:.82rem;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;font-weight:500;
+}
+.btn:hover{border-color:var(--azul-noche);}
+.btn-primary{background:var(--azul-noche);border-color:var(--azul-noche);color:#fff;}
+.btn-primary:hover{background:var(--azul-noche-2);}
+.btn-danger{color:var(--rojo);border-color:var(--rojo-suave);}
+.btn-danger:hover{background:var(--rojo-suave);}
+.btn-sm{padding:5px 10px;font-size:.76rem;}
+
+#content{padding:22px 26px 60px;max-width:1180px;width:100%;margin:0 auto;}
+.view{display:none;}
+.view.active{display:block;animation:fade .18s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
+
+.view-head{margin-bottom:18px;}
+.view-head h1{font-size:1.5rem;margin:0 0 3px;font-weight:600;}
+.view-head p{margin:0;color:var(--tinta-suave);font-size:.86rem;}
+
+.card{background:var(--tarjeta);border:1px solid var(--borde);border-radius:var(--radio-m);padding:18px 20px;box-shadow:var(--sombra);}
+.card + .card{margin-top:16px;}
+.section-title{font-size:.98rem;font-weight:600;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--borde);}
+
+/* dashboard cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
+@media(max-width:980px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:560px){.kpi-grid{grid-template-columns:1fr;}}
+.kpi{background:var(--tarjeta);border:1px solid var(--borde);border-radius:var(--radio-m);padding:15px 16px;box-shadow:var(--sombra);}
+.kpi .lbl{font-size:.74rem;color:var(--tinta-suave);margin-bottom:6px;}
+.kpi .val{font-family:var(--fdisp);font-size:1.36rem;font-weight:600;line-height:1.15;}
+.kpi .sub{font-size:.72rem;color:var(--tinta-suave);margin-top:4px;}
+.kpi.state-perdida{background:var(--rojo-suave);}
+.kpi.state-cerca{background:var(--ambar-suave);}
+.kpi.state-equilibrio{background:var(--azul-eq-suave);}
+.kpi.state-rentable{background:var(--verde-suave);}
+
+.estado-banner{display:flex;align-items:center;gap:12px;padding:16px 18px;border-radius:var(--radio-m);margin-bottom:16px;border:1px solid var(--borde);}
+.estado-banner .ico{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;color:#fff;}
+.estado-banner.perdida{background:var(--rojo-suave);}
+.estado-banner.perdida .ico{background:var(--rojo);}
+.estado-banner.cerca{background:var(--ambar-suave);}
+.estado-banner.cerca .ico{background:var(--ambar);}
+.estado-banner.equilibrio{background:var(--azul-eq-suave);}
+.estado-banner.equilibrio .ico{background:var(--azul-eq);}
+.estado-banner.rentable{background:var(--verde-suave);}
+.estado-banner.rentable .ico{background:var(--verde);}
+.estado-banner .txt strong{display:block;font-size:1.02rem;}
+.estado-banner .txt span{font-size:.82rem;color:var(--tinta-suave);}
+
+.alert-critica{background:var(--rojo-suave);border:1px solid var(--rojo);color:var(--rojo);padding:12px 14px;border-radius:var(--radio-s);font-size:.86rem;margin-bottom:16px;}
+
+/* forms */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+@media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr;}}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.field label{font-size:.78rem;color:var(--tinta-suave);font-weight:500;}
+.field input,.field select,.field textarea{
+  padding:9px 10px;border:1px solid var(--borde);border-radius:var(--radio-s);
+  background:var(--papel);color:var(--tinta);font-size:.9rem;
+}
+.field textarea{resize:vertical;min-height:64px;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--azul-eq);outline-offset:1px;}
+.field.invalid input{outline:2px solid var(--rojo);}
+.field .err{color:var(--rojo);font-size:.72rem;display:none;}
+.field.invalid .err{display:block;}
+.help{font-size:.72rem;color:var(--tinta-suave);margin-top:-8px;margin-bottom:12px;}
+
+.toggle-row{display:flex;gap:8px;margin-bottom:14px;}
+.toggle-row button{flex:1;padding:9px;border:1px solid var(--borde);background:var(--tarjeta);border-radius:var(--radio-s);cursor:pointer;font-size:.84rem;color:var(--tinta-suave);}
+.toggle-row button.active{background:var(--azul-noche);color:#fff;border-color:var(--azul-noche);font-weight:600;}
+
+table{width:100%;border-collapse:collapse;font-size:.85rem;}
+th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--borde);}
+th{color:var(--tinta-suave);font-weight:600;font-size:.74rem;text-transform:uppercase;letter-spacing:.03em;}
+tr:last-child td{border-bottom:none;}
+.impacto-alto{color:var(--rojo);font-weight:600;}
+.impacto-medio{color:var(--ambar);font-weight:600;}
+.impacto-bajo{color:var(--verde);font-weight:600;}
+.tag{display:inline-block;padding:2px 8px;border-radius:100px;font-size:.7rem;font-weight:600;}
+.tag.perdida{background:var(--rojo-suave);color:var(--rojo);}
+.tag.cerca{background:var(--ambar-suave);color:var(--ambar);}
+.tag.equilibrio{background:var(--azul-eq-suave);color:var(--azul-eq);}
+.tag.rentable{background:var(--verde-suave);color:var(--verde);}
+
+.gasto-row{display:grid;grid-template-columns:1.4fr 1fr 1.4fr auto;gap:10px;align-items:start;padding:10px 0;border-bottom:1px solid var(--borde);}
+.gasto-row:last-child{border-bottom:none;}
+@media(max-width:760px){.gasto-row{grid-template-columns:1fr;}}
+.gasto-row .nombre{font-weight:500;font-size:.87rem;padding-top:9px;}
+.gasto-total-bar{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--papel);border-radius:var(--radio-s);margin-top:8px;font-weight:600;}
+
+.rec-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;}
+.rec-list li{background:var(--papel);border-left:3px solid var(--azul-eq);padding:10px 12px;border-radius:var(--radio-s);font-size:.86rem;}
+
+.scenario-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+@media(max-width:900px){.scenario-cols{grid-template-columns:1fr;}}
+.scenario-col{border:1px solid var(--borde);border-radius:var(--radio-m);padding:14px;background:var(--papel);}
+.scenario-col h3{margin:0 0 10px;font-size:.92rem;}
+.scenario-col .row{display:flex;justify-content:space-between;font-size:.82rem;padding:4px 0;border-bottom:1px dashed var(--borde);}
+.scenario-col .row:last-child{border-bottom:none;}
+
+.chart-box{background:var(--tarjeta);border:1px solid var(--borde);border-radius:var(--radio-m);padding:16px;margin-bottom:16px;}
+.chart-box h3{margin:0 0 12px;font-size:.9rem;}
+.chart-box canvas{max-height:280px;}
+
+.empty-state{text-align:center;padding:40px 20px;color:var(--tinta-suave);}
+.empty-state .big{font-size:2rem;margin-bottom:8px;}
+
+footer.savebar{position:sticky;bottom:0;background:var(--tarjeta);border-top:1px solid var(--borde);padding:9px 22px;font-size:.75rem;color:var(--tinta-suave);display:flex;justify-content:space-between;align-items:center;}
+
+/* config ranges */
+.range-row{display:grid;grid-template-columns:1.4fr .8fr .8fr .6fr;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--borde);}
+.range-row input{padding:7px 8px;}
+.swatch{width:16px;height:16px;border-radius:4px;display:inline-block;}
+
+/* print / informe */
+#informe-print{display:none;}
+@media print{
+  #sidebar,#topbar,footer.savebar,.no-print{display:none !important;}
+  #content{padding:0;max-width:100%;}
+  .view{display:none !important;}
+  #informe-print{display:block !important;}
+  body{background:#fff;color:#000;}
+}
+#informe-print{padding:20px;}
+#informe-print h1{font-size:1.4rem;margin-bottom:2px;}
+#informe-print .meta{color:#555;font-size:.85rem;margin-bottom:18px;}
+#informe-print table{margin-bottom:18px;}
+#informe-print .ip-section{margin-bottom:20px;}
+#informe-print .ip-section h2{font-size:1rem;border-bottom:1px solid #ccc;padding-bottom:6px;}
+
+/* mobile nav */
+#mobiletopbar{display:none;}
+@media(max-width:840px){
+  #sidebar{position:fixed;left:-240px;top:0;z-index:100;transition:left .2s ease;box-shadow:2px 0 20px rgba(0,0,0,.3);}
+  #sidebar.open{left:0;}
+  #mobiletopbar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--azul-noche);color:#fff;position:sticky;top:0;z-index:30;}
+  #mobiletopbar button{all:unset;cursor:pointer;font-size:1.3rem;color:#fff;padding:4px 8px;}
+  #mobiletopbar .mark{font-family:var(--fdisp);font-weight:600;}
+  #content{padding:16px 14px 60px;}
+  #topbar{padding:10px 14px;}
+}
+.scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:90;}
+.scrim.show{display:block;}
+
+.small-note{font-size:.72rem;color:var(--tinta-suave);}
+.flexgap{display:flex;gap:8px;flex-wrap:wrap;}
+</style>
+</head>
+<body>
+
+<div id="mobiletopbar">
+  <button id="btnOpenNav" aria-label="Abrir menú">☰</button>
+  <span class="mark">Viabilidad 360</span>
+</div>
+<div class="scrim" id="scrim"></div>
+
+<div id="shell">
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="mark">Viabilidad 360</div>
+      <div class="sub">Restaurantes</div>
+    </div>
+    <nav class="navlist" id="navlist">
+      <button data-view="dashboard" class="active">📊 Panel principal</button>
+      <div class="grp-label">Datos del análisis</div>
+      <button data-view="generales">🏷️ Datos generales</button>
+      <button data-view="ingresos">💵 Ingresos</button>
+      <button data-view="foodcost">🍽️ Food cost</button>
+      <button data-view="gastos">🧾 Gastos operativos</button>
+      <div class="grp-label">Análisis</div>
+      <button data-view="participacion">📈 Participación de gastos</button>
+      <button data-view="escenarios">🧭 Simulador de escenarios</button>
+      <button data-view="metas">🎯 Metas y recomendaciones</button>
+      <button data-view="graficos">📉 Gráficos</button>
+      <button data-view="historial">🗓️ Historial mensual</button>
+      <div class="grp-label">Sistema</div>
+      <button data-view="config">⚙️ Configuración</button>
+      <button data-view="informe">🖨️ Informe ejecutivo</button>
+    </nav>
+    <button class="themebtn" id="btnTheme">🌓 Modo claro / oscuro</button>
+  </aside>
+
+  <div id="main">
+    <div id="topbar">
+      <div class="biz-select">
+        <label>Análisis activo</label>
+        <select id="selAnalisis"></select>
+      </div>
+      <div class="topbar-actions no-print">
+        <button class="btn btn-primary" id="btnNuevo">➕ Nuevo análisis</button>
+        <button class="btn" id="btnGuardar">💾 Guardar</button>
+        <button class="btn" id="btnDuplicar">📄 Duplicar</button>
+        <button class="btn btn-danger" id="btnEliminar">🗑️ Eliminar</button>
+        <button class="btn" id="btnImportarExcel">📥 Importar plantilla Excel</button>
+        <input type="file" id="fileImportExcel" accept=".xlsx" style="display:none;">
+        <button class="btn" id="btnDescargarPlantilla">📋 Descargar plantilla vacía</button>
+        <button class="btn" id="btnImprimir">🖨️ Imprimir / PDF</button>
+      </div>
+    </div>
+
+    <div id="content">
+
+      <!-- ============ DASHBOARD ============ -->
+      <section class="view active" data-view="dashboard">
+        <div class="view-head">
+          <h1 id="dashTitulo">Panel principal</h1>
+          <p id="dashSub">Resumen de viabilidad del periodo analizado.</p>
+        </div>
+        <div id="alertaCritica"></div>
+        <div id="estadoBanner"></div>
+        <div class="kpi-grid" id="kpiGrid"></div>
+        <div class="card">
+          <div class="section-title">Explicación automática</div>
+          <ul class="rec-list" id="explicacionAuto"></ul>
+        </div>
+      </section>
+
+      <!-- ============ DATOS GENERALES ============ -->
+      <section class="view" data-view="generales">
+        <div class="view-head"><h1>Datos generales del análisis</h1><p>Identificación del negocio y del periodo.</p></div>
+        <div class="card">
+          <div class="grid2">
+            <div class="field"><label>Nombre del restaurante o negocio</label><input type="text" id="g_nombre" placeholder="Ej. EYWA Café · Restaurante"></div>
+            <div class="field"><label>Sede</label><input type="text" id="g_sede" placeholder="Ej. Sede Prado"></div>
+            <div class="field"><label>Ciudad</label><input type="text" id="g_ciudad" placeholder="Ej. Barranquilla"></div>
+            <div class="field"><label>Mes y año analizado</label><input type="month" id="g_periodo"></div>
+            <div class="field"><label>Responsable del análisis</label><input type="text" id="g_responsable"></div>
+            <div class="field"><label>Días operados en el mes</label><input type="number" min="0" step="1" id="g_dias"></div>
+            <div class="field"><label>Número de puestos / capacidad</label><input type="number" min="0" step="1" id="g_capacidad"></div>
+          </div>
+          <div class="field"><label>Observaciones generales</label><textarea id="g_obs"></textarea></div>
+        </div>
+      </section>
+
+      <!-- ============ INGRESOS ============ -->
+      <section class="view" data-view="ingresos">
+        <div class="view-head"><h1>Ingresos del restaurante</h1><p>Ventas totales (con impuestos y propina) y ventas netas (antes de impuestos y sin propina) — la base real de la viabilidad.</p></div>
+        <div class="card">
+          <div class="section-title">
+            <input type="text" id="u1_nombre" style="border:none;background:transparent;font:inherit;font-weight:600;color:inherit;padding:0;width:auto;max-width:100%;">
+          </div>
+          <div class="grid2">
+            <div class="field"><label>Ventas totales (con impuestos y propina incluida)</label><input type="number" min="0" id="u1_ventasTotales"></div>
+            <div class="field"><label>Ventas antes de impuestos y sin propina</label><input type="number" min="0" id="u1_ventasNetas"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <label class="small-note"><input type="checkbox" id="i_usarUnidad2"> Este restaurante tiene una segunda unidad de negocio dentro del mismo local (comparte gastos fijos, personal e insumos con la unidad principal)</label>
+          <div id="wrapUnidad2" style="display:none;margin-top:14px;">
+            <div class="section-title">
+              <input type="text" id="u2_nombre" style="border:none;background:transparent;font:inherit;font-weight:600;color:inherit;padding:0;width:auto;max-width:100%;">
+            </div>
+            <div class="grid2">
+              <div class="field"><label>Ventas totales (con impuestos y propina incluida)</label><input type="number" min="0" id="u2_ventasTotales"></div>
+              <div class="field"><label>Ventas antes de impuestos y sin propina</label><input type="number" min="0" id="u2_ventasNetas"></div>
+            </div>
+          </div>
+          <div class="help" style="margin-top:10px;">Las dos unidades se venden por separado pero comparten arriendo, personal, servicios e insumos, por eso se totalizan en una sola base de ventas netas para medir la viabilidad del negocio completo.</div>
+        </div>
+
+        <div class="card">
+          <div class="grid2">
+            <div class="gasto-total-bar"><span>Ventas totales combinadas (con impuestos y propina)</span><span class="num-display" id="i_totalesBrutas">$0</span></div>
+            <div class="gasto-total-bar"><span>Ventas netas combinadas (usadas en los cálculos)</span><span class="num-display" id="i_netas">$0</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ FOOD COST ============ -->
+      <section class="view" data-view="foodcost">
+        <div class="view-head"><h1>Food cost — costo de materia prima</h1><p>Seleccione una sola modalidad de cálculo.</p></div>
+        <div class="card">
+          <div class="toggle-row">
+            <button data-modo="porcentaje" class="active" id="modoPct">Ingresar por porcentaje</button>
+            <button data-modo="valor" id="modoVal">Ingresar por valor en pesos</button>
+          </div>
+          <div class="field" id="wrapPct"><label>Porcentaje de food cost sobre ventas netas (%)</label><input type="number" min="0" step="0.01" id="f_pct"></div>
+          <div class="field" id="wrapVal" style="display:none;"><label>Valor mensual de materia prima consumida (COP)</label><input type="number" min="0" id="f_val"></div>
+          <div class="grid2">
+            <div class="gasto-total-bar"><span>Food cost en pesos</span><span class="num-display" id="f_pesos">$0</span></div>
+            <div class="gasto-total-bar"><span>Food cost (%)</span><span class="num-display" id="f_porcentaje">0,00%</span></div>
+          </div>
+          <div class="grid2" style="margin-top:14px;">
+            <div class="gasto-total-bar"><span>Margen de contribución</span><span class="num-display" id="f_margenPesos">$0</span></div>
+            <div class="gasto-total-bar"><span>% de contribución</span><span class="num-display" id="f_margenPct">0,00%</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ GASTOS ============ -->
+      <section class="view" data-view="gastos">
+        <div class="view-head"><h1>Costos fijos y gastos operativos</h1><p>Edite los conceptos predefinidos o agregue nuevos.</p></div>
+        <div class="card">
+          <div id="gastosList"></div>
+          <div class="flexgap" style="margin-top:12px;">
+            <input type="text" id="nuevoGastoNombre" placeholder="Nombre del nuevo concepto" style="flex:1;padding:9px 10px;border:1px solid var(--borde);border-radius:var(--radio-s);background:var(--papel);color:var(--tinta);">
+            <button class="btn btn-primary btn-sm" id="btnAgregarGasto">➕ Agregar concepto</button>
+          </div>
+          <div class="gasto-total-bar"><span>Total costos fijos y gastos operativos</span><span class="num-display" id="gastosTotal">$0</span></div>
+        </div>
+      </section>
+
+      <!-- ============ PARTICIPACIÓN ============ -->
+      <section class="view" data-view="participacion">
+        <div class="view-head"><h1>Participación de cada gasto</h1><p>Impacto de cada concepto sobre las ventas netas.</p></div>
+        <div class="card">
+          <div class="grid3">
+            <div class="gasto-total-bar"><span>Costo total de personal</span><span class="num-display" id="p_personal">$0</span></div>
+            <div class="gasto-total-bar"><span>% personal / ventas</span><span class="num-display" id="p_personalPct">0,00%</span></div>
+            <div class="gasto-total-bar"><span>Costo de ocupación</span><span class="num-display" id="p_ocupacion">$0</span></div>
+            <div class="gasto-total-bar"><span>% ocupación / ventas</span><span class="num-display" id="p_ocupacionPct">0,00%</span></div>
+            <div class="gasto-total-bar"><span>Servicios públicos / ventas</span><span class="num-display" id="p_servPct">0,00%</span></div>
+            <div class="gasto-total-bar"><span>Marketing / ventas</span><span class="num-display" id="p_marketingPct">0,00%</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title">Detalle por concepto</div>
+          <table><thead><tr><th>Concepto</th><th>Valor mensual</th><th>% de ventas</th><th>Impacto</th></tr></thead><tbody id="p_tabla"></tbody></table>
+        </div>
+        <div class="card">
+          <div class="section-title">Los 5 gastos de mayor valor</div>
+          <table><thead><tr><th>#</th><th>Concepto</th><th>Valor</th><th>% ventas</th></tr></thead><tbody id="p_top5"></tbody></table>
+        </div>
+      </section>
+
+      <!-- ============ ESCENARIOS ============ -->
+      <section class="view" data-view="escenarios">
+        <div class="view-head"><h1>Simulador de escenarios</h1><p>El escenario actual es de solo lectura; los otros dos son editables y no afectan el análisis original.</p></div>
+        <div class="card">
+          <div class="scenario-cols">
+            <div class="scenario-col">
+              <h3>Escenario actual</h3>
+              <div id="esc_actual_resultados"></div>
+            </div>
+            <div class="scenario-col">
+              <h3>Escenario conservador</h3>
+              <div class="field"><label>Δ Ventas (%)</label><input type="number" id="esc_cons_ventas" value="0"></div>
+              <div class="field"><label>Δ Food cost (puntos)</label><input type="number" id="esc_cons_fc" value="0"></div>
+              <div class="field"><label>Δ Gastos operativos (%)</label><input type="number" id="esc_cons_gastos" value="0"></div>
+              <div class="field"><label>Días operados</label><input type="number" id="esc_cons_dias" value="0"></div>
+              <div id="esc_cons_resultados"></div>
+            </div>
+            <div class="scenario-col">
+              <h3>Escenario objetivo</h3>
+              <div class="field"><label>Δ Ventas (%)</label><input type="number" id="esc_obj_ventas" value="0"></div>
+              <div class="field"><label>Δ Food cost (puntos)</label><input type="number" id="esc_obj_fc" value="0"></div>
+              <div class="field"><label>Δ Gastos operativos (%)</label><input type="number" id="esc_obj_gastos" value="0"></div>
+              <div class="field"><label>Días operados</label><input type="number" id="esc_obj_dias" value="0"></div>
+              <div id="esc_obj_resultados"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ METAS ============ -->
+      <section class="view" data-view="metas">
+        <div class="view-head"><h1>Metas y recomendaciones</h1><p>Cálculos derivados exclusivamente de los números registrados.</p></div>
+        <div class="card">
+          <div class="section-title">Punto de equilibrio</div>
+          <div class="grid2">
+            <div class="gasto-total-bar"><span>Aumento de ventas necesario</span><span class="num-display" id="m_aumentoVentas">$0</span></div>
+            <div class="gasto-total-bar"><span>Disminución de gastos necesaria</span><span class="num-display" id="m_reduccionGastos">$0</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title">Utilidad proyectada con crecimiento de ventas</div>
+          <table><thead><tr><th>Crecimiento</th><th>Ventas netas</th><th>Utilidad</th><th>Margen</th></tr></thead><tbody id="m_crecimiento"></tbody></table>
+        </div>
+        <div class="card">
+          <div class="section-title">Sensibilidad al food cost</div>
+          <table><thead><tr><th>Reducción (puntos)</th><th>Nuevo food cost</th><th>Utilidad</th><th>Δ Utilidad</th></tr></thead><tbody id="m_foodcost"></tbody></table>
+        </div>
+        <div class="card">
+          <div class="section-title">Sensibilidad a los gastos operativos</div>
+          <table><thead><tr><th>Variación</th><th>Nuevos gastos</th><th>Utilidad</th><th>Δ Utilidad</th></tr></thead><tbody id="m_gastosvar"></tbody></table>
+        </div>
+        <div class="card">
+          <div class="section-title">Recomendaciones automáticas</div>
+          <ul class="rec-list" id="m_recomendaciones"></ul>
+        </div>
+      </section>
+
+      <!-- ============ GRAFICOS ============ -->
+      <section class="view" data-view="graficos">
+        <div class="view-head"><h1>Gráficos</h1><p>Se actualizan automáticamente con los datos del análisis activo.</p></div>
+        <div class="chart-box"><h3>Ventas frente al costo total</h3><canvas id="chVentasCosto"></canvas></div>
+        <div class="chart-box"><h3>Distribución de gastos por categoría</h3><canvas id="chGastos"></canvas></div>
+        <div class="chart-box"><h3>Food cost, costos fijos y utilidad</h3><canvas id="chComposicion"></canvas></div>
+        <div class="chart-box"><h3>Comparación de escenarios</h3><canvas id="chEscenarios"></canvas></div>
+        <div class="chart-box"><h3>Ventas actuales frente al punto de equilibrio</h3><canvas id="chPE"></canvas></div>
+        <div class="chart-box"><h3>Evolución mensual (histórico del negocio)</h3><canvas id="chEvolucion"></canvas></div>
+      </section>
+
+      <!-- ============ HISTORIAL ============ -->
+      <section class="view" data-view="historial">
+        <div class="view-head"><h1>Historial y comparación mensual</h1><p>Todos los análisis guardados para el negocio y sede activos.</p></div>
+        <div class="card">
+          <table><thead><tr><th>Mes</th><th>Ventas netas</th><th>Food cost</th><th>Gastos</th><th>Costo total</th><th>Utilidad</th><th>Margen</th><th>P.E.</th><th>Estado</th></tr></thead><tbody id="histTabla"></tbody></table>
+        </div>
+        <div class="card">
+          <div class="section-title">Comparación: mes actual frente al mes anterior</div>
+          <div id="histComparacion"></div>
+        </div>
+      </section>
+
+      <!-- ============ CONFIG ============ -->
+      <section class="view" data-view="config">
+        <div class="view-head"><h1>Configuración</h1><p>Rangos de clasificación, datos y respaldo de la información.</p></div>
+        <div class="card">
+          <div class="section-title">Rangos de clasificación (según margen de rentabilidad %)</div>
+          <div class="range-row" style="font-weight:600;color:var(--tinta-suave);font-size:.74rem;text-transform:uppercase;"><span>Estado</span><span>Mínimo %</span><span>Máximo %</span><span>Color</span></div>
+          <div id="rangosList"></div>
+          <button class="btn btn-sm" id="btnRestaurarRangos" style="margin-top:10px;">Restaurar rangos por defecto</button>
+        </div>
+        <div class="card">
+          <div class="section-title">Guardado y seguridad de la información</div>
+          <p class="small-note" id="ultimaActualizacion">Última actualización: —</p>
+          <div class="flexgap" style="margin-top:10px;">
+            <button class="btn" id="btnExportJSON">⬇️ Exportar copia de seguridad (JSON)</button>
+            <button class="btn" id="btnImportJSON">⬆️ Restaurar desde JSON</button>
+            <input type="file" id="fileImportJSON" accept=".json" style="display:none;">
+            <button class="btn" id="btnExportCSV">⬇️ Exportar historial (CSV)</button>
+          </div>
+          <p class="small-note" style="margin-top:10px;">Los datos se guardan en el almacenamiento local del navegador (localStorage). La estructura está preparada para conectarse posteriormente a Firebase.</p>
+        </div>
+      </section>
+
+      <!-- ============ INFORME (vista previa) ============ -->
+      <section class="view" data-view="informe">
+        <div class="view-head"><h1>Informe ejecutivo</h1><p>Use "Imprimir / PDF" en la barra superior para generar el documento limpio.</p></div>
+        <div class="card" id="informePreview"></div>
+      </section>
+
+    </div>
+
+    <footer class="savebar no-print">
+      <span id="footerEstado">Sin cambios sin guardar</span>
+      <span id="footerFecha"></span>
+    </footer>
+  </div>
+</div>
+
+<!-- ================= INFORME IMPRIMIBLE ================= -->
+<div id="informe-print"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   0. PLANTILLA EXCEL PARA EL CONTADOR (base64, incrustada)
+   ============================================================ */
+const PLANTILLA_XLSX_B64 = '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';
+
+/* ============================================================
+   1. ALMACENAMIENTO
+   ============================================================ */
+const LS_KEY = 'v360_analisis';
+const LS_CURRENT = 'v360_current';
+const LS_CONFIG = 'v360_config';
+
+/* ============================================================
+   0b. FIREBASE / FIRESTORE — base de datos en la nube
+   Se usa la API REST de Firestore directamente (sin SDK), con
+   reglas abiertas, igual que en los demás proyectos de Guillermo.
+   Guarda localmente en localStorage como caché/respaldo y
+   sincroniza en segundo plano con Firestore para compartir la
+   información entre dispositivos.
+   ============================================================ */
+const FIREBASE_PROJECT_ID = 'viabilidad360-restaurantes';
+const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+let syncEstado = 'pendiente'; // pendiente | sincronizando | ok | error
+
+function marcarEstadoSync(estado){
+  syncEstado = estado;
+  const el = document.getElementById('footerEstado');
+  if(!el) return;
+  if(estado==='sincronizando') el.textContent = 'Sincronizando con la nube…';
+  else if(estado==='ok') el.textContent = 'Sincronizado con la nube ✓';
+  else if(estado==='error') el.textContent = 'Guardado solo en este dispositivo (sin conexión con la nube)';
+}
+
+async function fsWriteDoc(coleccion, docId, dataObj){
+  try{
+    const url = `${FIRESTORE_BASE}/${coleccion}/${encodeURIComponent(docId)}`;
+    const res = await fetch(url, {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ fields: { data: { stringValue: JSON.stringify(dataObj) } } })
+    });
+    marcarEstadoSync(res.ok ? 'ok' : 'error');
+    return res.ok;
+  }catch(e){ marcarEstadoSync('error'); return false; }
+}
+async function fsDeleteDoc(coleccion, docId){
+  try{
+    const res = await fetch(`${FIRESTORE_BASE}/${coleccion}/${encodeURIComponent(docId)}`, { method:'DELETE' });
+    marcarEstadoSync(res.ok ? 'ok' : 'error');
+    return res.ok;
+  }catch(e){ marcarEstadoSync('error'); return false; }
+}
+async function fsListDocs(coleccion){
+  try{
+    const res = await fetch(`${FIRESTORE_BASE}/${coleccion}?pageSize=300`);
+    if(!res.ok) return [];
+    const json = await res.json();
+    if(!json.documents) return [];
+    return json.documents.map(d=>{
+      try{ return JSON.parse(d.fields.data.stringValue); }catch(e){ return null; }
+    }).filter(Boolean);
+  }catch(e){ return []; }
+}
+async function fsGetDoc(coleccion, docId){
+  try{
+    const res = await fetch(`${FIRESTORE_BASE}/${coleccion}/${encodeURIComponent(docId)}`);
+    if(!res.ok) return null;
+    const json = await res.json();
+    if(!json.fields || !json.fields.data) return null;
+    return JSON.parse(json.fields.data.stringValue);
+  }catch(e){ return null; }
+}
+function syncAnalisisAFirestore(a){ marcarEstadoSync('sincronizando'); fsWriteDoc('analisis', a.id, a); }
+function syncConfigAFirestore(cfg){ marcarEstadoSync('sincronizando'); fsWriteDoc('config', 'rangos', cfg); }
+function syncEliminarDeFirestore(id){ marcarEstadoSync('sincronizando'); fsDeleteDoc('analisis', id); }
+
+const DEFAULT_RANGOS = [
+  {id:'perdida',    label:'EN PÉRDIDA',                 min:-Infinity, max:-2,       color:'#B3372B'},
+  {id:'cerca',      label:'CERCA DEL PUNTO DE EQUILIBRIO', min:-2,     max:0,        color:'#B9791C'},
+  {id:'equilibrio', label:'PUNTO DE EQUILIBRIO',         min:0,        max:1,        color:'#2A5FA5'},
+  {id:'baja',       label:'RENTABILIDAD BAJA',           min:1,        max:5,        color:'#1C7C54'},
+  {id:'media',      label:'RENTABILIDAD MEDIA',          min:5,        max:10,       color:'#1C7C54'},
+  {id:'alta',       label:'RENTABILIDAD ALTA',           min:10,       max:Infinity, color:'#1C7C54'}
+];
+
+const DEFAULT_GASTOS = [
+  'Nómina del personal fijo','Prestaciones sociales y seguridad social',
+  'Personal extra, horas extras y recargos','Arriendo y administración del local',
+  'Servicios públicos','Impuestos y obligaciones legales','Marketing y publicidad',
+  'Software y plataformas tecnológicas','Honorarios profesionales y administrativos',
+  'Mantenimiento de equipos e instalaciones','Aseo, fumigación y manejo de residuos',
+  'Seguridad y vigilancia','Seguros','Gastos bancarios y comisiones de medios de pago',
+  'Transporte y logística','Otros gastos operativos'
+];
+
+function uid(){ return 'a_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+function nuevoAnalisis(){
+  return {
+    id: uid(),
+    general:{ nombre:'', sede:'', ciudad:'', periodo:'', responsable:'', dias:0, capacidad:0, obs:'' },
+    ingresos:{
+      unidad1:{ nombre:'Unidad principal', ventasTotales:0, ventasNetas:0 },
+      usarUnidad2:false,
+      unidad2:{ nombre:'Segunda unidad de negocio', ventasTotales:0, ventasNetas:0 }
+    },
+    foodcost:{ modo:'porcentaje', pct:0, valor:0 },
+    gastos: DEFAULT_GASTOS.map((n,i)=>({id:'g'+i, nombre:n, valor:0, obs:'', personalizado:false})),
+    escenarios:{
+      conservador:{ ventas:0, fc:0, gastos:0, dias:0 },
+      objetivo:{ ventas:0, fc:0, gastos:0, dias:0 }
+    },
+    actualizado: new Date().toISOString()
+  };
+}
+
+function loadAll(){
+  try{ return JSON.parse(localStorage.getItem(LS_KEY)) || []; }catch(e){ return []; }
+}
+function saveAll(list){
+  localStorage.setItem(LS_KEY, JSON.stringify(list));
+  list.forEach(a=>syncAnalisisAFirestore(a));
+}
+function loadConfig(){
+  try{
+    const c = JSON.parse(localStorage.getItem(LS_CONFIG));
+    if(c && c.rangos) return c;
+  }catch(e){}
+  return { rangos: JSON.parse(JSON.stringify(DEFAULT_RANGOS)) };
+}
+function saveConfig(cfg){
+  localStorage.setItem(LS_CONFIG, JSON.stringify(cfg));
+  syncConfigAFirestore(cfg);
+}
+
+let STATE = { analisis: loadAll(), config: loadConfig(), currentId: localStorage.getItem(LS_CURRENT) || null };
+
+if(STATE.analisis.length === 0){
+  const a = nuevoAnalisis();
+  STATE.analisis.push(a);
+  STATE.currentId = a.id;
+  saveAll(STATE.analisis);
+  localStorage.setItem(LS_CURRENT, STATE.currentId);
+}
+if(!STATE.currentId || !STATE.analisis.find(a=>a.id===STATE.currentId)){
+  STATE.currentId = STATE.analisis[0].id;
+}
+
+function current(){ return STATE.analisis.find(a=>a.id===STATE.currentId); }
+function persist(){
+  const a = current();
+  if(a) a.actualizado = new Date().toISOString();
+  saveAll(STATE.analisis);
+  localStorage.setItem(LS_CURRENT, STATE.currentId);
+  document.getElementById('ultimaActualizacion').textContent = 'Última actualización: ' + (a? new Date(a.actualizado).toLocaleString('es-CO') : '—');
+  document.getElementById('footerFecha').textContent = new Date().toLocaleTimeString('es-CO');
+}
+
+/* ============================================================
+   2. FORMATO
+   ============================================================ */
+function fmtCOP(v){
+  if(v===null || v===undefined || isNaN(v)) return 'No disponible';
+  return v.toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0});
+}
+function fmtPct(v){
+  if(v===null || v===undefined || isNaN(v) || !isFinite(v)) return 'No disponible';
+  return v.toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+}
+function num(v){ const n=parseFloat(v); return isNaN(n)||n<0 ? 0 : n; }
+
+/* ============================================================
+   3. MOTOR DE CÁLCULO (funciones puras)
+   ============================================================ */
+function calcVentasNetas(ing){
+  // Ventas antes de impuestos y sin propina: el único valor que entra realmente
+  // al restaurante y con el que se mide la viabilidad del negocio.
+  // Cuando el restaurante tiene una segunda unidad de negocio que comparte los
+  // mismos costos fijos e insumos, las ventas netas se totalizan entre ambas.
+  const u1 = num(ing.unidad1.ventasNetas);
+  const u2 = ing.usarUnidad2 ? num(ing.unidad2.ventasNetas) : 0;
+  return u1 + u2;
+}
+function calcVentasTotalesBrutas(ing){
+  const u1 = num(ing.unidad1.ventasTotales);
+  const u2 = ing.usarUnidad2 ? num(ing.unidad2.ventasTotales) : 0;
+  return u1 + u2;
+}
+function calcFoodCost(ventasNetas, fc){
+  if(fc.modo === 'porcentaje'){
+    const pct = num(fc.pct);
+    const pesos = ventasNetas>0 ? ventasNetas*(pct/100) : 0;
+    return { pesos, pct };
+  } else {
+    const pesos = num(fc.valor);
+    const pct = ventasNetas>0 ? (pesos/ventasNetas*100) : null;
+    return { pesos, pct };
+  }
+}
+function calcTotalGastos(gastos){ return gastos.reduce((s,g)=>s+num(g.valor),0); }
+function calcCostoTotal(foodCostPesos, totalGastos){ return foodCostPesos + totalGastos; }
+function calcUtilidad(ventasNetas, costoTotal){ return ventasNetas - costoTotal; }
+function calcMargen(utilidad, ventasNetas){ return ventasNetas>0 ? (utilidad/ventasNetas*100) : null; }
+function calcPuntoEquilibrio(totalGastos, fcPct){
+  const margenContrib = 100 - fcPct;
+  if(margenContrib<=0) return null;
+  return totalGastos / (margenContrib/100);
+}
+function calcDiferenciaPE(ventasNetas, pe){ return pe===null ? null : ventasNetas - pe; }
+function calcCumplimientoPE(ventasNetas, pe){ return (pe===null || pe===0) ? null : (ventasNetas/pe*100); }
+function calcVentaDiaria(ventasNetas, dias){ return dias>0 ? ventasNetas/dias : null; }
+function calcVentaDiariaRequerida(pe, dias){ return (dias>0 && pe!==null) ? pe/dias : null; }
+function calcVentaPorPuesto(ventasNetas, capacidad){ return capacidad>0 ? ventasNetas/capacidad : null; }
+
+function clasificar(margen, rangos){
+  if(margen===null) return {id:'sin-datos', label:'SIN DATOS', color:'#8A94A3'};
+  const ordenados = rangos.slice().sort((a,b)=>a.min-b.min);
+  for(const r of ordenados){
+    if(margen>=r.min && margen<r.max) return r;
+  }
+  // valor exactamente en el límite superior de la última franja
+  const ultimo = ordenados[ordenados.length-1];
+  if(margen>=ultimo.min) return ultimo;
+  return ordenados[0];
+}
+
+function calcularTodo(a, cfg){
+  const ventasNetas = calcVentasNetas(a.ingresos);
+  const fc = calcFoodCost(ventasNetas, a.foodcost);
+  const totalGastos = calcTotalGastos(a.gastos);
+  const costoTotal = calcCostoTotal(fc.pesos, totalGastos);
+  const utilidad = calcUtilidad(ventasNetas, costoTotal);
+  const margen = calcMargen(utilidad, ventasNetas);
+  const pe = calcPuntoEquilibrio(totalGastos, fc.pct===null?100:fc.pct);
+  const diferenciaPE = calcDiferenciaPE(ventasNetas, pe);
+  const cumplimientoPE = calcCumplimientoPE(ventasNetas, pe);
+  const dias = num(a.general.dias);
+  const ventaDiaria = calcVentaDiaria(ventasNetas, dias);
+  const ventaDiariaReq = calcVentaDiariaRequerida(pe, dias);
+  const capacidad = num(a.general.capacidad);
+  const ventaPorPuesto = capacidad>0 ? calcVentaPorPuesto(ventasNetas, capacidad) : null;
+  const estado = clasificar(margen, cfg.rangos);
+  const fcCritico = (fc.pct!==null && fc.pct>=100);
+  return { ventasNetas, foodCostPesos:fc.pesos, foodCostPct:fc.pct, totalGastos, costoTotal,
+    utilidad, margen, pe, diferenciaPE, cumplimientoPE, ventaDiaria, ventaDiariaReq, ventaPorPuesto,
+    estado, fcCritico, dias, capacidad };
+}
+
+/* ============================================================
+   4. LECTURA / ESCRITURA DE FORMULARIOS <-> ESTADO
+   ============================================================ */
+function bindInput(id, getPath, setPath, isCheckbox){
+  const el = document.getElementById(id);
+  el.addEventListener('input', ()=>{
+    const a = current();
+    setPath(a, isCheckbox ? el.checked : el.value);
+    render();
+  });
+}
+
+function setPathValue(obj, path, val){
+  const keys = path.split('.');
+  let o = obj;
+  for(let i=0;i<keys.length-1;i++) o = o[keys[i]];
+  o[keys[keys.length-1]] = val;
+}
+function getPathValue(obj, path){
+  return path.split('.').reduce((o,k)=>o? o[k]:undefined, obj);
+}
+
+const FIELD_MAP = [
+  ['g_nombre','general.nombre'], ['g_sede','general.sede'], ['g_ciudad','general.ciudad'],
+  ['g_periodo','general.periodo'], ['g_responsable','general.responsable'],
+  ['g_dias','general.dias'], ['g_capacidad','general.capacidad'], ['g_obs','general.obs'],
+  ['u1_nombre','ingresos.unidad1.nombre'],
+  ['u1_ventasTotales','ingresos.unidad1.ventasTotales'], ['u1_ventasNetas','ingresos.unidad1.ventasNetas'],
+  ['u2_nombre','ingresos.unidad2.nombre'],
+  ['u2_ventasTotales','ingresos.unidad2.ventasTotales'], ['u2_ventasNetas','ingresos.unidad2.ventasNetas'],
+  ['f_pct','foodcost.pct'], ['f_val','foodcost.valor'],
+  ['esc_cons_ventas','escenarios.conservador.ventas'], ['esc_cons_fc','escenarios.conservador.fc'],
+  ['esc_cons_gastos','escenarios.conservador.gastos'], ['esc_cons_dias','escenarios.conservador.dias'],
+  ['esc_obj_ventas','escenarios.objetivo.ventas'], ['esc_obj_fc','escenarios.objetivo.fc'],
+  ['esc_obj_gastos','escenarios.objetivo.gastos'], ['esc_obj_dias','escenarios.objetivo.dias']
+];
+
+function attachFieldListeners(){
+  FIELD_MAP.forEach(([id,path])=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('input', ()=>{
+      const a = current();
+      let val = el.value;
+      if(el.type==='number') val = val==='' ? 0 : parseFloat(val);
+      validateField(el);
+      setPathValue(a, path, val);
+      render();
+    });
+  });
+  document.getElementById('i_usarUnidad2').addEventListener('change', (e)=>{
+    current().ingresos.usarUnidad2 = e.target.checked;
+    document.getElementById('wrapUnidad2').style.display = e.target.checked ? '' : 'none';
+    render();
+  });
+}
+
+function validateField(el){
+  const wrap = el.closest('.field');
+  if(!wrap) return;
+  if(el.type==='number' && el.value!=='' && parseFloat(el.value)<0){
+    wrap.classList.add('invalid'); el.value=0;
+  } else {
+    wrap.classList.remove('invalid');
+  }
+}
+
+function pushFormFromState(){
+  const a = current();
+  FIELD_MAP.forEach(([id,path])=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const v = getPathValue(a, path);
+    el.value = (v===undefined||v===null) ? '' : v;
+  });
+  document.getElementById('i_usarUnidad2').checked = !!a.ingresos.usarUnidad2;
+  document.getElementById('wrapUnidad2').style.display = a.ingresos.usarUnidad2 ? '' : 'none';
+  setModoBotones(a.foodcost.modo);
+}
+
+function setModoBotones(modo){
+  document.getElementById('modoPct').classList.toggle('active', modo==='porcentaje');
+  document.getElementById('modoVal').classList.toggle('active', modo==='valor');
+  document.getElementById('wrapPct').style.display = modo==='porcentaje' ? '' : 'none';
+  document.getElementById('wrapVal').style.display = modo==='valor' ? '' : 'none';
+}
+document.getElementById('modoPct').addEventListener('click', ()=>{ current().foodcost.modo='porcentaje'; setModoBotones('porcentaje'); render(); });
+document.getElementById('modoVal').addEventListener('click', ()=>{ current().foodcost.modo='valor'; setModoBotones('valor'); render(); });
+
+/* ============================================================
+   5. GASTOS — render dinámico
+   ============================================================ */
+function renderGastos(){
+  const a = current();
+  const list = document.getElementById('gastosList');
+  list.innerHTML = '';
+  a.gastos.forEach(g=>{
+    const row = document.createElement('div');
+    row.className = 'gasto-row';
+    row.innerHTML = `
+      <div class="nombre">${escapeHtml(g.nombre)}${g.personalizado?' <span class="small-note">(personalizado)</span>':''}</div>
+      <div class="field" style="margin-bottom:0;"><input type="number" min="0" value="${g.valor}" data-gid="${g.id}" class="gasto-valor"></div>
+      <div class="field" style="margin-bottom:0;"><input type="text" placeholder="Observación" value="${escapeHtml(g.obs||'')}" data-gid="${g.id}" class="gasto-obs"></div>
+      <div>${g.personalizado?`<button class="btn btn-sm btn-danger" data-gid="${g.id}" class="btn-del-gasto" data-action="del">✕</button>`:''}</div>
+    `;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.gasto-valor').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const g = current().gastos.find(x=>x.id===inp.dataset.gid);
+      g.valor = num(inp.value);
+      render();
+    });
+  });
+  list.querySelectorAll('.gasto-obs').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const g = current().gastos.find(x=>x.id===inp.dataset.gid);
+      g.obs = inp.value;
+    });
+  });
+  list.querySelectorAll('[data-action="del"]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const a2 = current();
+      a2.gastos = a2.gastos.filter(x=>x.id!==btn.dataset.gid);
+      render();
+    });
+  });
+  document.getElementById('gastosTotal').textContent = fmtCOP(calcTotalGastos(a.gastos));
+}
+document.getElementById('btnAgregarGasto').addEventListener('click', ()=>{
+  const input = document.getElementById('nuevoGastoNombre');
+  const nombre = input.value.trim();
+  if(!nombre) return;
+  const a = current();
+  a.gastos.push({ id:'gc'+Date.now(), nombre, valor:0, obs:'', personalizado:true });
+  input.value='';
+  render();
+});
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ============================================================
+   6. DASHBOARD
+   ============================================================ */
+function renderDashboard(){
+  const a = current();
+  const r = calcularTodo(a, STATE.config);
+  document.getElementById('dashTitulo').textContent = a.general.nombre || 'Nuevo análisis sin nombre';
+  document.getElementById('dashSub').textContent = `${a.general.sede||'Sin sede'} · ${a.general.ciudad||'Sin ciudad'} · ${a.general.periodo||'Sin periodo'}`;
+  document.getElementById('i_netas').textContent = fmtCOP(r.ventasNetas);
+  document.getElementById('i_totalesBrutas').textContent = fmtCOP(calcVentasTotalesBrutas(a.ingresos));
+
+  const alertaBox = document.getElementById('alertaCritica');
+  alertaBox.innerHTML = r.fcCritico
+    ? `<div class="alert-critica">⚠️ El food cost es igual o superior al 100 %. No existe margen de contribución suficiente para calcular un punto de equilibrio viable.</div>` : '';
+
+  const banner = document.getElementById('estadoBanner');
+  const claseEstado = r.estado.id==='perdida'?'perdida':r.estado.id==='cerca'?'cerca':r.estado.id==='equilibrio'?'equilibrio':'rentable';
+  const icono = claseEstado==='perdida'?'▼':claseEstado==='cerca'?'●':claseEstado==='equilibrio'?'■':'▲';
+  banner.innerHTML = `<div class="estado-banner ${claseEstado}"><div class="ico">${icono}</div><div class="txt"><strong>${r.estado.label}</strong><span>Margen de rentabilidad: ${fmtPct(r.margen)}</span></div></div>`;
+
+  const kpis = [
+    ['Ventas antes de impuestos y sin propina', fmtCOP(r.ventasNetas), a.ingresos.usarUnidad2 ? `${escapeHtml(a.ingresos.unidad1.nombre||'Unidad 1')}: ${fmtCOP(num(a.ingresos.unidad1.ventasNetas))} · ${escapeHtml(a.ingresos.unidad2.nombre||'Unidad 2')}: ${fmtCOP(num(a.ingresos.unidad2.ventasNetas))}` : 'Ventas totales con impuestos y propina: '+fmtCOP(calcVentasTotalesBrutas(a.ingresos))],
+    ['Food cost mensual', fmtCOP(r.foodCostPesos), fmtPct(r.foodCostPct)+' de las ventas'],
+    ['Costos fijos y gastos operativos', fmtCOP(r.totalGastos), ''],
+    ['Costo total del restaurante', fmtCOP(r.costoTotal), 'Food cost + gastos operativos'],
+    ['Utilidad o pérdida mensual', fmtCOP(r.utilidad), ''],
+    ['Margen de rentabilidad', fmtPct(r.margen), ''],
+    ['Punto de equilibrio', fmtCOP(r.pe), r.diferenciaPE!==null? ('Diferencia: '+fmtCOP(r.diferenciaPE)) : ''],
+    ['Estado actual del negocio', r.estado.label, fmtPct(r.cumplimientoPE)+' del punto de equilibrio']
+  ];
+  const grid = document.getElementById('kpiGrid');
+  grid.innerHTML = kpis.map(([lbl,val,sub],i)=>{
+    const stateClass = i===7 ? ('state-'+(claseEstado)) : '';
+    return `<div class="kpi ${stateClass}"><div class="lbl">${lbl}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`;
+  }).join('');
+
+  // explicación automática
+  const exp = [];
+  if(r.utilidad<0){
+    exp.push(`El restaurante presenta una pérdida mensual de ${fmtCOP(Math.abs(r.utilidad))}.`);
+  } else {
+    exp.push(`El restaurante genera una utilidad mensual de ${fmtCOP(r.utilidad)}.`);
+  }
+  if(r.pe!==null){
+    if(r.diferenciaPE<0){
+      exp.push(`Al restaurante le faltan ${fmtCOP(Math.abs(r.diferenciaPE))} en ventas para alcanzar el punto de equilibrio.`);
+    } else {
+      exp.push(`El restaurante superó su punto de equilibrio en ${fmtCOP(r.diferenciaPE)}.`);
+    }
+  } else {
+    exp.push('El punto de equilibrio no está disponible porque el food cost consume el 100 % o más del margen de contribución.');
+  }
+  if(r.margen!==null) exp.push(`Por cada $100 vendidos, el negocio ${r.margen>=0?'gana':'pierde'} $${Math.abs(r.margen).toFixed(2)}.`);
+  if(r.ventaDiariaReq!==null) exp.push(`Para llegar al punto de equilibrio, necesita vender en promedio ${fmtCOP(r.ventaDiariaReq)} diarios.`);
+  document.getElementById('explicacionAuto').innerHTML = exp.map(t=>`<li>${t}</li>`).join('');
+}
+
+/* ============================================================
+   7. PARTICIPACIÓN DE GASTOS
+   ============================================================ */
+function findGastoValor(a, nombreParcial){
+  const g = a.gastos.find(x=>x.nombre.toLowerCase().includes(nombreParcial.toLowerCase()));
+  return g ? num(g.valor) : 0;
+}
+function renderParticipacion(){
+  const a = current();
+  const r = calcularTodo(a, STATE.config);
+  const ventasNetas = r.ventasNetas;
+
+  const personal = findGastoValor(a,'Nómina del personal fijo') + findGastoValor(a,'Prestaciones sociales') + findGastoValor(a,'Personal extra');
+  const ocupacion = findGastoValor(a,'Arriendo y administración');
+  const servicios = findGastoValor(a,'Servicios públicos');
+  const marketing = findGastoValor(a,'Marketing y publicidad');
+  const pct = v => ventasNetas>0 ? (v/ventasNetas*100) : null;
+
+  document.getElementById('p_personal').textContent = fmtCOP(personal);
+  document.getElementById('p_personalPct').textContent = fmtPct(pct(personal));
+  document.getElementById('p_ocupacion').textContent = fmtCOP(ocupacion);
+  document.getElementById('p_ocupacionPct').textContent = fmtPct(pct(ocupacion));
+  document.getElementById('p_servPct').textContent = fmtPct(pct(servicios));
+  document.getElementById('p_marketingPct').textContent = fmtPct(pct(marketing));
+
+  const filas = a.gastos.map(g=>{
+    const p = pct(num(g.valor));
+    let impacto = 'bajo', clase='impacto-bajo';
+    if(p!==null){
+      if(p>=10){impacto='Alto';clase='impacto-alto';}
+      else if(p>=4){impacto='Medio';clase='impacto-medio';}
+      else {impacto='Bajo';clase='impacto-bajo';}
+    } else { impacto='—'; clase=''; }
+    return {nombre:g.nombre, valor:num(g.valor), pct:p, impacto, clase};
+  });
+  document.getElementById('p_tabla').innerHTML = filas.map(f=>
+    `<tr><td>${escapeHtml(f.nombre)}</td><td>${fmtCOP(f.valor)}</td><td>${fmtPct(f.pct)}</td><td class="${f.clase}">${f.impacto}</td></tr>`
+  ).join('');
+
+  const top5 = filas.slice().sort((a2,b2)=>b2.valor-a2.valor).slice(0,5);
+  document.getElementById('p_top5').innerHTML = top5.map((f,i)=>
+    `<tr><td>${i+1}</td><td>${escapeHtml(f.nombre)}</td><td>${fmtCOP(f.valor)}</td><td>${fmtPct(f.pct)}</td></tr>`
+  ).join('');
+}
+
+/* ============================================================
+   8. ESCENARIOS
+   ============================================================ */
+function calcularEscenario(a, deltas){
+  const ventasNetasBase = calcVentasNetas(a.ingresos);
+  const ventasNetas = ventasNetasBase * (1 + num2(deltas.ventas)/100);
+  const fcBase = calcFoodCost(ventasNetasBase, a.foodcost);
+  const fcPctBase = fcBase.pct===null? 0 : fcBase.pct;
+  const fcPct = Math.max(0, fcPctBase + num2(deltas.fc));
+  const foodCostPesos = ventasNetas>0 ? ventasNetas*(fcPct/100) : 0;
+  const totalGastosBase = calcTotalGastos(a.gastos);
+  const totalGastos = totalGastosBase * (1 + num2(deltas.gastos)/100);
+  const costoTotal = foodCostPesos + totalGastos;
+  const utilidad = ventasNetas - costoTotal;
+  const margen = calcMargen(utilidad, ventasNetas);
+  const pe = calcPuntoEquilibrio(totalGastos, fcPct);
+  const estado = clasificar(margen, STATE.config.rangos);
+  return { ventasNetas, foodCostPesos, totalGastos, costoTotal, utilidad, margen, pe, estado };
+}
+function num2(v){ const n=parseFloat(v); return isNaN(n)?0:n; }
+
+function renderEscBloque(r, elId){
+  document.getElementById(elId).innerHTML = `
+    <div class="row"><span>Ventas netas</span><strong>${fmtCOP(r.ventasNetas)}</strong></div>
+    <div class="row"><span>Food cost</span><strong>${fmtCOP(r.foodCostPesos)}</strong></div>
+    <div class="row"><span>Gastos operativos</span><strong>${fmtCOP(r.totalGastos)}</strong></div>
+    <div class="row"><span>Costo total</span><strong>${fmtCOP(r.costoTotal)}</strong></div>
+    <div class="row"><span>Utilidad</span><strong>${fmtCOP(r.utilidad)}</strong></div>
+    <div class="row"><span>Margen</span><strong>${fmtPct(r.margen)}</strong></div>
+    <div class="row"><span>P. equilibrio</span><strong>${fmtCOP(r.pe)}</strong></div>
+    <div class="row"><span>Estado</span><span class="tag ${r.estado.id||'equilibrio'}">${r.estado.label}</span></div>
+  `;
+}
+function renderEscenarios(){
+  const a = current();
+  const actual = calcularEscenario(a, {ventas:0, fc:0, gastos:0});
+  renderEscBloque(actual, 'esc_actual_resultados');
+  const cons = calcularEscenario(a, a.escenarios.conservador);
+  renderEscBloque(cons, 'esc_cons_resultados');
+  const obj = calcularEscenario(a, a.escenarios.objetivo);
+  renderEscBloque(obj, 'esc_obj_resultados');
+  ['esc_cons_ventas','esc_cons_fc','esc_cons_gastos','esc_cons_dias','esc_obj_ventas','esc_obj_fc','esc_obj_gastos','esc_obj_dias'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(document.activeElement!==el){
+      const [_, esc, campo] = id.split('_');
+      el.value = a.escenarios[esc==='cons'?'conservador':'objetivo'][campo];
+    }
+  });
+  return {actual, cons, obj};
+}
+
+/* ============================================================
+   9. METAS Y RECOMENDACIONES
+   ============================================================ */
+function renderMetas(){
+  const a = current();
+  const r = calcularTodo(a, STATE.config);
+
+  const aumentoVentas = (r.pe!==null && r.diferenciaPE<0) ? Math.abs(r.diferenciaPE) : 0;
+  document.getElementById('m_aumentoVentas').textContent = r.pe!==null ? fmtCOP(aumentoVentas) : 'No disponible';
+
+  const margenContribPct = r.foodCostPct!==null ? (100-r.foodCostPct) : null;
+  let reduccionGastos = 0;
+  if(r.utilidad<0) reduccionGastos = Math.abs(r.utilidad);
+  document.getElementById('m_reduccionGastos').textContent = fmtCOP(reduccionGastos);
+
+  const crecTr = [5,10,15,20].map(p=>{
+    const nuevasVentas = r.ventasNetas*(1+p/100);
+    const fc = calcFoodCost(nuevasVentas, a.foodcost);
+    const costoTotal = fc.pesos + r.totalGastos;
+    const utilidad = nuevasVentas - costoTotal;
+    const margen = calcMargen(utilidad, nuevasVentas);
+    return `<tr><td>+${p}%</td><td>${fmtCOP(nuevasVentas)}</td><td>${fmtCOP(utilidad)}</td><td>${fmtPct(margen)}</td></tr>`;
+  }).join('');
+  document.getElementById('m_crecimiento').innerHTML = crecTr;
+
+  const fcTr = [1,2,3,5].map(pts=>{
+    const nuevoFcPct = Math.max(0,(r.foodCostPct||0)-pts);
+    const nuevoFc = r.ventasNetas*(nuevoFcPct/100);
+    const utilidad = r.ventasNetas - (nuevoFc + r.totalGastos);
+    const delta = utilidad - r.utilidad;
+    return `<tr><td>-${pts} pts</td><td>${fmtPct(nuevoFcPct)}</td><td>${fmtCOP(utilidad)}</td><td>${fmtCOP(delta)}</td></tr>`;
+  }).join('');
+  document.getElementById('m_foodcost').innerHTML = fcTr;
+
+  const gTr = [5,10].map(p=>{
+    const nuevosGastos = r.totalGastos*(1+p/100);
+    const utilidad = r.ventasNetas - (r.foodCostPesos + nuevosGastos);
+    const delta = utilidad - r.utilidad;
+    return `<tr><td>+${p}%</td><td>${fmtCOP(nuevosGastos)}</td><td>${fmtCOP(utilidad)}</td><td>${fmtCOP(delta)}</td></tr>`;
+  }).join('');
+  document.getElementById('m_gastosvar').innerHTML = gTr;
+
+  const recs = [];
+  if(r.pe!==null){
+    recs.push(r.ventasNetas < r.pe ? 'Las ventas actuales están por debajo del punto de equilibrio.' : 'Las ventas actuales superan el punto de equilibrio.');
+  }
+  if(r.foodCostPct!==null) recs.push(`El food cost representa el ${r.foodCostPct.toFixed(2)}% de las ventas.`);
+  const personalPct = r.ventasNetas>0 ? (findGastoValor(a,'Nómina del personal fijo')+findGastoValor(a,'Prestaciones sociales')+findGastoValor(a,'Personal extra'))/r.ventasNetas*100 : null;
+  if(personalPct!==null) recs.push(`El costo de personal representa el ${personalPct.toFixed(2)}% de las ventas.`);
+  const mayor = a.gastos.slice().sort((x,y)=>num(y.valor)-num(x.valor))[0];
+  if(mayor && num(mayor.valor)>0) recs.push(`El gasto de mayor impacto es ${mayor.nombre}.`);
+  if(r.pe!==null && r.diferenciaPE<0) recs.push(`Para alcanzar el punto de equilibrio manteniendo los costos actuales, las ventas deben aumentar en ${fmtCOP(Math.abs(r.diferenciaPE))}.`);
+  if(r.foodCostPct!==null){
+    const nuevoFc2 = Math.max(0,r.foodCostPct-2);
+    const nuevoFcPesos = r.ventasNetas*(nuevoFc2/100);
+    const nuevaUtilidad = r.ventasNetas - (nuevoFcPesos + r.totalGastos);
+    recs.push(`Una reducción de 2 puntos en el food cost mejoraría la utilidad mensual en ${fmtCOP(nuevaUtilidad-r.utilidad)}.`);
+  }
+  document.getElementById('m_recomendaciones').innerHTML = recs.map(t=>`<li>${t}</li>`).join('');
+}
+
+/* ============================================================
+   10. GRÁFICOS
+   ============================================================ */
+let charts = {};
+function destroyChart(key){ if(charts[key]){ charts[key].destroy(); delete charts[key]; } }
+function chartColors(){ return { azul:'#0E2A47', verde:'#1C7C54', rojo:'#B3372B', ambar:'#B9791C', azuleq:'#2A5FA5', gris:'#9BA5B3' }; }
+
+function renderGraficos(){
+  const a = current();
+  const r = calcularTodo(a, STATE.config);
+  const C = chartColors();
+
+  destroyChart('vc');
+  charts.vc = new Chart(document.getElementById('chVentasCosto'), {
+    type:'bar',
+    data:{ labels:['Ventas netas','Costo total'], datasets:[{ data:[r.ventasNetas, r.costoTotal], backgroundColor:[C.azuleq, C.rojo] }] },
+    options:{ plugins:{legend:{display:false}}, responsive:true }
+  });
+
+  destroyChart('gastos');
+  const gastosConValor = a.gastos.filter(g=>num(g.valor)>0);
+  charts.gastos = new Chart(document.getElementById('chGastos'), {
+    type:'doughnut',
+    data:{ labels: gastosConValor.map(g=>g.nombre), datasets:[{ data: gastosConValor.map(g=>num(g.valor)),
+      backgroundColor: gastosConValor.map((_,i)=>['#0E2A47','#2A5FA5','#1C7C54','#B9791C','#B3372B','#5B6472','#7C8CA6','#3E7C4B','#9C6B1E','#7A2E25'][i%10]) }] },
+    options:{ responsive:true }
+  });
+
+  destroyChart('comp');
+  charts.comp = new Chart(document.getElementById('chComposicion'), {
+    type:'pie',
+    data:{ labels:['Food cost','Costos fijos y operativos', r.utilidad>=0?'Utilidad':'Pérdida'],
+      datasets:[{ data:[r.foodCostPesos, r.totalGastos, Math.abs(r.utilidad)], backgroundColor:[C.ambar, C.azul, r.utilidad>=0?C.verde:C.rojo] }] },
+    options:{ responsive:true }
+  });
+
+  destroyChart('esc');
+  const escs = renderEscenariosDataOnly();
+  charts.esc = new Chart(document.getElementById('chEscenarios'), {
+    type:'bar',
+    data:{ labels:['Actual','Conservador','Objetivo'],
+      datasets:[
+        {label:'Ventas netas', data:[escs.actual.ventasNetas, escs.cons.ventasNetas, escs.obj.ventasNetas], backgroundColor:C.azuleq},
+        {label:'Utilidad', data:[escs.actual.utilidad, escs.cons.utilidad, escs.obj.utilidad], backgroundColor:C.verde}
+      ]},
+    options:{ responsive:true }
+  });
+
+  destroyChart('pe');
+  charts.pe = new Chart(document.getElementById('chPE'), {
+    type:'bar',
+    data:{ labels:['Ventas actuales','Punto de equilibrio'], datasets:[{ data:[r.ventasNetas, r.pe||0], backgroundColor:[C.azuleq, C.ambar] }] },
+    options:{ plugins:{legend:{display:false}}, responsive:true }
+  });
+
+  destroyChart('evo');
+  const historial = STATE.analisis.filter(x=>x.general.nombre===a.general.nombre && x.general.sede===a.general.sede)
+    .sort((x,y)=>(x.general.periodo||'').localeCompare(y.general.periodo||''));
+  const evoRes = historial.map(h=>calcularTodo(h, STATE.config));
+  charts.evo = new Chart(document.getElementById('chEvolucion'), {
+    type:'line',
+    data:{ labels: historial.map(h=>h.general.periodo||'—'),
+      datasets:[
+        {label:'Ventas', data:evoRes.map(x=>x.ventasNetas), borderColor:C.azuleq, fill:false},
+        {label:'Costo total', data:evoRes.map(x=>x.costoTotal), borderColor:C.rojo, fill:false},
+        {label:'Utilidad', data:evoRes.map(x=>x.utilidad), borderColor:C.verde, fill:false}
+      ]},
+    options:{ responsive:true }
+  });
+}
+function renderEscenariosDataOnly(){
+  const a = current();
+  return {
+    actual: calcularEscenario(a, {ventas:0, fc:0, gastos:0}),
+    cons: calcularEscenario(a, a.escenarios.conservador),
+    obj: calcularEscenario(a, a.escenarios.objetivo)
+  };
+}
+
+/* ============================================================
+   11. HISTORIAL
+   ============================================================ */
+function renderHistorial(){
+  const a = current();
+  const grupo = STATE.analisis.filter(x=>x.general.nombre===a.general.nombre && x.general.sede===a.general.sede)
+    .sort((x,y)=>(x.general.periodo||'').localeCompare(y.general.periodo||''));
+  document.getElementById('histTabla').innerHTML = grupo.map(h=>{
+    const r = calcularTodo(h, STATE.config);
+    const clase = r.estado.id==='perdida'?'perdida':r.estado.id==='cerca'?'cerca':r.estado.id==='equilibrio'?'equilibrio':'rentable';
+    return `<tr><td>${h.general.periodo||'—'}</td><td>${fmtCOP(r.ventasNetas)}</td><td>${fmtCOP(r.foodCostPesos)}</td><td>${fmtCOP(r.totalGastos)}</td><td>${fmtCOP(r.costoTotal)}</td><td>${fmtCOP(r.utilidad)}</td><td>${fmtPct(r.margen)}</td><td>${fmtCOP(r.pe)}</td><td><span class="tag ${clase}">${r.estado.label}</span></td></tr>`;
+  }).join('') || '<tr><td colspan="9" class="small-note">Sin registros para este negocio.</td></tr>';
+
+  const idx = grupo.findIndex(x=>x.id===a.id);
+  const box = document.getElementById('histComparacion');
+  if(idx>0){
+    const prev = calcularTodo(grupo[idx-1], STATE.config);
+    const act = calcularTodo(grupo[idx], STATE.config);
+    const diff = (curr,ant)=> ant!==0 ? ((curr-ant)/Math.abs(ant)*100) : null;
+    const acumuladoVentas = grupo.slice(0, idx+1).reduce((s,h)=>s+calcularTodo(h,STATE.config).ventasNetas,0);
+    const acumuladoUtilidad = grupo.slice(0, idx+1).reduce((s,h)=>s+calcularTodo(h,STATE.config).utilidad,0);
+    box.innerHTML = `
+      <div class="grid3">
+        <div class="gasto-total-bar"><span>Variación de ventas</span><span class="num-display">${fmtPct(diff(act.ventasNetas, prev.ventasNetas))}</span></div>
+        <div class="gasto-total-bar"><span>Variación de food cost</span><span class="num-display">${fmtPct(diff(act.foodCostPesos, prev.foodCostPesos))}</span></div>
+        <div class="gasto-total-bar"><span>Variación de gastos</span><span class="num-display">${fmtPct(diff(act.totalGastos, prev.totalGastos))}</span></div>
+        <div class="gasto-total-bar"><span>Variación de utilidad</span><span class="num-display">${fmtPct(diff(act.utilidad, prev.utilidad))}</span></div>
+        <div class="gasto-total-bar"><span>Acumulado anual — ventas</span><span class="num-display">${fmtCOP(acumuladoVentas)}</span></div>
+        <div class="gasto-total-bar"><span>Acumulado anual — utilidad</span><span class="num-display">${fmtCOP(acumuladoUtilidad)}</span></div>
+      </div>`;
+  } else {
+    box.innerHTML = '<p class="small-note">No hay un mes anterior registrado para este negocio todavía.</p>';
+  }
+}
+
+/* ============================================================
+   12. CONFIGURACIÓN — rangos
+   ============================================================ */
+function renderConfig(){
+  const list = document.getElementById('rangosList');
+  list.innerHTML = STATE.config.rangos.map((r,i)=>`
+    <div class="range-row">
+      <span>${r.label}</span>
+      <input type="number" step="0.01" value="${r.min===-Infinity?'':r.min}" placeholder="-∞" data-i="${i}" data-k="min">
+      <input type="number" step="0.01" value="${r.max===Infinity?'':r.max}" placeholder="+∞" data-i="${i}" data-k="max">
+      <span class="swatch" style="background:${r.color}"></span>
+    </div>`).join('');
+  list.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const i = +inp.dataset.i, k = inp.dataset.k;
+      const v = inp.value==='' ? (k==='min'?-Infinity:Infinity) : parseFloat(inp.value);
+      STATE.config.rangos[i][k] = v;
+      saveConfig(STATE.config);
+      render();
+    });
+  });
+  document.getElementById('ultimaActualizacion').textContent = 'Última actualización: ' + (current()? new Date(current().actualizado).toLocaleString('es-CO') : '—');
+}
+document.getElementById('btnRestaurarRangos').addEventListener('click', ()=>{
+  STATE.config.rangos = JSON.parse(JSON.stringify(DEFAULT_RANGOS));
+  saveConfig(STATE.config);
+  render();
+});
+
+/* ============================================================
+   13. INFORME EJECUTIVO
+   ============================================================ */
+function buildInformeHTML(){
+  const a = current();
+  const r = calcularTodo(a, STATE.config);
+  const fecha = new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
+  return `
+    <h1>${escapeHtml(a.general.nombre||'Restaurante sin nombre')}</h1>
+    <div class="meta">Sede: ${escapeHtml(a.general.sede||'—')} · Ciudad: ${escapeHtml(a.general.ciudad||'—')} · Periodo: ${a.general.periodo||'—'} · Responsable: ${escapeHtml(a.general.responsable||'—')}</div>
+    <div class="ip-section">
+      <h2>Resumen de ingresos</h2>
+      <table>
+      <tr><td>${escapeHtml(a.ingresos.unidad1.nombre||'Unidad principal')} — ventas totales (con impuestos y propina)</td><td>${fmtCOP(num(a.ingresos.unidad1.ventasTotales))}</td></tr>
+      <tr><td>${escapeHtml(a.ingresos.unidad1.nombre||'Unidad principal')} — ventas antes de impuestos y sin propina</td><td>${fmtCOP(num(a.ingresos.unidad1.ventasNetas))}</td></tr>
+      ${a.ingresos.usarUnidad2 ? `
+      <tr><td>${escapeHtml(a.ingresos.unidad2.nombre||'Segunda unidad de negocio')} — ventas totales (con impuestos y propina)</td><td>${fmtCOP(num(a.ingresos.unidad2.ventasTotales))}</td></tr>
+      <tr><td>${escapeHtml(a.ingresos.unidad2.nombre||'Segunda unidad de negocio')} — ventas antes de impuestos y sin propina</td><td>${fmtCOP(num(a.ingresos.unidad2.ventasNetas))}</td></tr>
+      ` : ''}
+      <tr><td>Ventas totales combinadas (con impuestos y propina)</td><td>${fmtCOP(calcVentasTotalesBrutas(a.ingresos))}</td></tr>
+      <tr><td><strong>Ventas netas combinadas (base de viabilidad)</strong></td><td><strong>${fmtCOP(r.ventasNetas)}</strong></td></tr>
+      </table>
+    </div>
+    <div class="ip-section">
+      <h2>Food cost</h2>
+      <table><tr><td>Food cost en pesos</td><td>${fmtCOP(r.foodCostPesos)}</td></tr>
+      <tr><td>Food cost (%)</td><td>${fmtPct(r.foodCostPct)}</td></tr></table>
+    </div>
+    <div class="ip-section">
+      <h2>Costos y gastos</h2>
+      <table>${a.gastos.map(g=>`<tr><td>${escapeHtml(g.nombre)}</td><td>${fmtCOP(num(g.valor))}</td></tr>`).join('')}
+      <tr><td><strong>Total</strong></td><td><strong>${fmtCOP(r.totalGastos)}</strong></td></tr></table>
+    </div>
+    <div class="ip-section">
+      <h2>Resultado</h2>
+      <table>
+      <tr><td>Costo total</td><td>${fmtCOP(r.costoTotal)}</td></tr>
+      <tr><td>Utilidad o pérdida</td><td>${fmtCOP(r.utilidad)}</td></tr>
+      <tr><td>Margen de rentabilidad</td><td>${fmtPct(r.margen)}</td></tr>
+      <tr><td>Punto de equilibrio</td><td>${fmtCOP(r.pe)}</td></tr>
+      <tr><td>Diferencia frente al punto de equilibrio</td><td>${fmtCOP(r.diferenciaPE)}</td></tr>
+      <tr><td>Estado</td><td>${r.estado.label}</td></tr>
+      </table>
+    </div>
+    <div class="ip-section">
+      <h2>Observaciones</h2>
+      <p>${escapeHtml(a.general.obs||'—')}</p>
+    </div>
+    <div class="meta">Fecha de elaboración: ${fecha}</div>
+  `;
+}
+function renderInforme(){
+  document.getElementById('informePreview').innerHTML = buildInformeHTML();
+}
+
+/* ============================================================
+   14. EXPORT / IMPORT
+   ============================================================ */
+function downloadBlob(content, filename, type){
+  const blob = new Blob([content], {type});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = filename;
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+document.getElementById('btnExportJSON').addEventListener('click', ()=>{
+  const data = { analisis: STATE.analisis, config: STATE.config, exportado: new Date().toISOString() };
+  downloadBlob(JSON.stringify(data,null,2), 'viabilidad360_backup.json', 'application/json');
+});
+document.getElementById('btnImportJSON').addEventListener('click', ()=> document.getElementById('fileImportJSON').click());
+document.getElementById('fileImportJSON').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const data = JSON.parse(ev.target.result);
+      if(!Array.isArray(data.analisis)) throw new Error('Estructura inválida');
+      if(!confirm('¿Restaurar esta copia de seguridad? Se reemplazarán los datos actuales.')) return;
+      STATE.analisis = data.analisis;
+      STATE.config = data.config && data.config.rangos ? data.config : STATE.config;
+      STATE.currentId = STATE.analisis[0] ? STATE.analisis[0].id : null;
+      saveAll(STATE.analisis); saveConfig(STATE.config); persist();
+      populateSelect(); render();
+      alert('Copia de seguridad restaurada correctamente.');
+    }catch(err){
+      alert('El archivo no tiene un formato válido de copia de seguridad de Viabilidad 360.');
+    }
+  };
+  reader.readAsText(file);
+});
+document.getElementById('btnExportCSV').addEventListener('click', ()=>{
+  const a = current();
+  const grupo = STATE.analisis.filter(x=>x.general.nombre===a.general.nombre && x.general.sede===a.general.sede);
+  const rows = [['Mes','Ventas netas','Food cost','Gastos operativos','Costo total','Utilidad','Margen %','Punto de equilibrio','Estado']];
+  grupo.forEach(h=>{
+    const r = calcularTodo(h, STATE.config);
+    rows.push([h.general.periodo, r.ventasNetas, r.foodCostPesos, r.totalGastos, r.costoTotal, r.utilidad, r.margen, r.pe, r.estado.label]);
+  });
+  const csv = rows.map(row=>row.map(c=>`"${String(c===null||c===undefined?'':c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  downloadBlob(csv, 'viabilidad360_historial.csv', 'text/csv');
+});
+
+/* ============================================================
+   14b. IMPORTAR PLANTILLA EXCEL DEL CONTADOR
+   ============================================================ */
+function b64ToArrayBuffer(b64){
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+document.getElementById('btnDescargarPlantilla').addEventListener('click', ()=>{
+  const buf = b64ToArrayBuffer(PLANTILLA_XLSX_B64);
+  downloadBlob(buf, 'Plantilla_Viabilidad360.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+});
+
+function sheetToMap(ws){
+  // Convierte una hoja de 2 columnas (Campo/Concepto | Valor) en un mapa etiqueta -> valor
+  const map = {};
+  if(!ws) return map;
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+  for(let i=1;i<rows.length;i++){ // salta encabezado
+    const label = (rows[i][0]||'').toString().trim();
+    if(label) map[label] = rows[i][1];
+  }
+  return map;
+}
+function toNum(v){ const n = parseFloat(v); return isNaN(n) ? 0 : (n<0?0:n); }
+
+function importarDesdeWorkbook(wb){
+  const hojasReq = ['Datos_Generales','Ingresos','Food_Cost','Gastos_Operativos'];
+  const faltantes = hojasReq.filter(h=>!wb.Sheets[h]);
+  if(faltantes.length){
+    alert('El archivo no tiene el formato de la plantilla Viabilidad 360. Faltan las hojas: '+faltantes.join(', '));
+    return;
+  }
+  const dg = sheetToMap(wb.Sheets['Datos_Generales']);
+  const ing = sheetToMap(wb.Sheets['Ingresos']);
+  const fc = sheetToMap(wb.Sheets['Food_Cost']);
+
+  const a = nuevoAnalisis();
+  a.general.nombre = (dg['Nombre del restaurante o negocio']||'').toString().trim();
+  a.general.sede = (dg['Sede']||'').toString().trim();
+  a.general.ciudad = (dg['Ciudad']||'').toString().trim();
+  a.general.periodo = (dg['Mes y año analizado (AAAA-MM)']||'').toString().trim();
+  a.general.responsable = (dg['Responsable del análisis']||'').toString().trim();
+  a.general.dias = toNum(dg['Días operados en el mes']);
+  a.general.capacidad = toNum(dg['Capacidad (número de puestos)']);
+  a.general.obs = (dg['Observaciones generales']||'').toString().trim();
+
+  a.ingresos.unidad1.nombre = (ing['Nombre de la unidad de negocio principal']||'Unidad principal').toString().trim();
+  a.ingresos.unidad1.ventasTotales = toNum(ing['Unidad principal — ventas totales (con impuestos y propina) (COP)']);
+  a.ingresos.unidad1.ventasNetas = toNum(ing['Unidad principal — ventas antes de impuestos y sin propina (COP)']);
+  a.ingresos.usarUnidad2 = (ing['¿Tiene una segunda unidad de negocio? (SI/NO)']||'').toString().trim().toUpperCase()==='SI';
+  a.ingresos.unidad2.nombre = (ing['Nombre de la segunda unidad de negocio']||'Segunda unidad de negocio').toString().trim();
+  a.ingresos.unidad2.ventasTotales = toNum(ing['Unidad 2 — ventas totales (con impuestos y propina) (COP)']);
+  a.ingresos.unidad2.ventasNetas = toNum(ing['Unidad 2 — ventas antes de impuestos y sin propina (COP)']);
+
+  const modo = (fc['Modo (PORCENTAJE o VALOR)']||'').toString().trim().toUpperCase();
+  a.foodcost.modo = modo==='VALOR' ? 'valor' : 'porcentaje';
+  a.foodcost.pct = toNum(fc['Porcentaje de food cost (%) — si el modo es PORCENTAJE']);
+  a.foodcost.valor = toNum(fc['Valor food cost en pesos (COP) — si el modo es VALOR']);
+
+  // Gastos: lee toda la hoja Gastos_Operativos fila por fila (Concepto | Valor | Observación)
+  const wsG = wb.Sheets['Gastos_Operativos'];
+  const rowsG = XLSX.utils.sheet_to_json(wsG, {header:1, defval:''});
+  const gastosImportados = [];
+  for(let i=1;i<rowsG.length;i++){
+    let nombre = (rowsG[i][0]||'').toString().trim();
+    if(!nombre || nombre.toUpperCase().startsWith('TOTAL')) continue;
+    const esPersonalizadoPlaceholder = /^Concepto personalizado \d/.test(nombre);
+    const valor = toNum(rowsG[i][1]);
+    const obs = (rowsG[i][2]||'').toString().trim();
+    if(esPersonalizadoPlaceholder){
+      // solo se incluye si el contador escribió un nombre real y hay valor u observación
+      continue; // los placeholders sin renombrar se ignoran
+    }
+    gastosImportados.push({ id:'gi'+i, nombre, valor, obs, personalizado: !DEFAULT_GASTOS.includes(nombre) });
+  }
+  if(gastosImportados.length) a.gastos = gastosImportados;
+
+  STATE.analisis.push(a);
+  STATE.currentId = a.id;
+  saveAll(STATE.analisis);
+  populateSelect(); render(); persist();
+  switchView('dashboard');
+  alert('Plantilla importada correctamente. Se creó un nuevo análisis: "'+(a.general.nombre||'Sin nombre')+'".');
+}
+
+document.getElementById('btnImportarExcel').addEventListener('click', ()=> document.getElementById('fileImportExcel').click());
+document.getElementById('fileImportExcel').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const data = new Uint8Array(ev.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      importarDesdeWorkbook(wb);
+    }catch(err){
+      alert('No se pudo leer el archivo. Verifique que sea un .xlsx generado a partir de la plantilla de Viabilidad 360.');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = '';
+});
+
+/* ============================================================
+   15. BARRA SUPERIOR — CRUD DE ANÁLISIS
+   ============================================================ */
+function populateSelect(){
+  const sel = document.getElementById('selAnalisis');
+  sel.innerHTML = STATE.analisis.map(a=>{
+    const nombre = a.general.nombre || 'Sin nombre';
+    const periodo = a.general.periodo || 'sin periodo';
+    return `<option value="${a.id}" ${a.id===STATE.currentId?'selected':''}>${escapeHtml(nombre)} — ${escapeHtml(a.general.sede||'')} · ${periodo}</option>`;
+  }).join('');
+}
+document.getElementById('selAnalisis').addEventListener('change', (e)=>{
+  STATE.currentId = e.target.value;
+  localStorage.setItem(LS_CURRENT, STATE.currentId);
+  render();
+});
+document.getElementById('btnNuevo').addEventListener('click', ()=>{
+  const a = nuevoAnalisis();
+  STATE.analisis.push(a);
+  STATE.currentId = a.id;
+  saveAll(STATE.analisis);
+  populateSelect(); render();
+  switchView('generales');
+});
+document.getElementById('btnGuardar').addEventListener('click', ()=>{
+  persist();
+  document.getElementById('footerEstado').textContent = 'Guardado ✓';
+  setTimeout(()=>document.getElementById('footerEstado').textContent='Sin cambios sin guardar', 1800);
+});
+document.getElementById('btnDuplicar').addEventListener('click', ()=>{
+  const a = JSON.parse(JSON.stringify(current()));
+  a.id = uid();
+  a.actualizado = new Date().toISOString();
+  STATE.analisis.push(a);
+  STATE.currentId = a.id;
+  saveAll(STATE.analisis);
+  populateSelect(); render();
+});
+document.getElementById('btnEliminar').addEventListener('click', ()=>{
+  if(STATE.analisis.length<=1){ alert('Debe existir al menos un análisis.'); return; }
+  if(!confirm('¿Eliminar este análisis? Esta acción no se puede deshacer.')) return;
+  const idEliminado = STATE.currentId;
+  STATE.analisis = STATE.analisis.filter(a=>a.id!==STATE.currentId);
+  STATE.currentId = STATE.analisis[0].id;
+  saveAll(STATE.analisis);
+  syncEliminarDeFirestore(idEliminado);
+  populateSelect(); render();
+});
+document.getElementById('btnImprimir').addEventListener('click', ()=>{
+  document.getElementById('informe-print').innerHTML = buildInformeHTML();
+  window.print();
+});
+
+/* ============================================================
+   16. NAVEGACIÓN
+   ============================================================ */
+function switchView(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.dataset.view===view));
+  document.querySelectorAll('#navlist button').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('scrim').classList.remove('show');
+}
+document.getElementById('navlist').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-view]');
+  if(btn) switchView(btn.dataset.view);
+});
+document.getElementById('btnOpenNav').addEventListener('click', ()=>{
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('scrim').classList.add('show');
+});
+document.getElementById('scrim').addEventListener('click', ()=>{
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('scrim').classList.remove('show');
+});
+
+/* tema */
+function applyTheme(t){ document.documentElement.setAttribute('data-theme', t); localStorage.setItem('v360_theme', t); }
+document.getElementById('btnTheme').addEventListener('click', ()=>{
+  const cur = document.documentElement.getAttribute('data-theme');
+  applyTheme(cur==='dark' ? 'light' : 'dark');
+});
+applyTheme(localStorage.getItem('v360_theme') || 'light');
+
+/* ============================================================
+   17. RENDER GENERAL
+   ============================================================ */
+function render(){
+  pushFormFromState();
+  renderGastos();
+  renderDashboard();
+  renderParticipacion();
+  renderEscenarios();
+  renderMetas();
+  renderHistorial();
+  renderConfig();
+  renderInforme();
+  populateSelect();
+  if(document.querySelector('.view[data-view="graficos"]').classList.contains('active')) renderGraficos();
+}
+document.querySelectorAll('#navlist button[data-view="graficos"]').forEach(b=>{
+  b.addEventListener('click', renderGraficos);
+});
+
+attachFieldListeners();
+render();
+document.getElementById('footerFecha').textContent = new Date().toLocaleTimeString('es-CO');
+
+/* ============================================================
+   18. SINCRONIZACIÓN INICIAL CON FIRESTORE
+   Al abrir la app, trae lo que haya en la nube. Si un análisis
+   existe en Firestore, esa versión manda (por si se editó desde
+   otro dispositivo). Los análisis que solo existen en este
+   dispositivo se suben para que queden respaldados también.
+   ============================================================ */
+async function syncFromFirestore(){
+  marcarEstadoSync('sincronizando');
+  const [remotos, cfgRemoto] = await Promise.all([
+    fsListDocs('analisis'),
+    fsGetDoc('config', 'rangos')
+  ]);
+
+  if(remotos.length === 0 && cfgRemoto === null){
+    // Primera vez: no hay nada en la nube todavía — subimos lo local.
+    STATE.analisis.forEach(a=>fsWriteDoc('analisis', a.id, a));
+    fsWriteDoc('config', 'rangos', STATE.config);
+    marcarEstadoSync('ok');
+    return;
+  }
+
+  if(remotos.length){
+    const idsRemotos = new Set(remotos.map(a=>a.id));
+    const soloLocales = STATE.analisis.filter(a=>!idsRemotos.has(a.id));
+    STATE.analisis = remotos.concat(soloLocales);
+    soloLocales.forEach(a=>fsWriteDoc('analisis', a.id, a)); // sube lo que faltaba en la nube
+    if(!STATE.analisis.find(a=>a.id===STATE.currentId)){
+      STATE.currentId = STATE.analisis[0].id;
+    }
+    saveAllLocalSolamente(STATE.analisis);
+  }
+  if(cfgRemoto && cfgRemoto.rangos){
+    STATE.config = cfgRemoto;
+    localStorage.setItem(LS_CONFIG, JSON.stringify(STATE.config));
+  }
+
+  populateSelect();
+  render();
+  marcarEstadoSync('ok');
+}
+function saveAllLocalSolamente(list){ localStorage.setItem(LS_KEY, JSON.stringify(list)); }
+
+syncFromFirestore();
+
+})();
+</script>
+</body>
+</html>
