@@ -246,7 +246,7 @@ footer.savebar{position:sticky;bottom:0;background:var(--tarjeta);border-top:1px
 
 <div id="mobiletopbar">
   <button id="btnOpenNav" aria-label="Abrir menú">☰</button>
-  <span class="mark">Viabilidad 360 · v1.4</span>
+  <span class="mark">Viabilidad 360 · v1.5</span>
 </div>
 <div class="scrim" id="scrim"></div>
 
@@ -254,7 +254,7 @@ footer.savebar{position:sticky;bottom:0;background:var(--tarjeta);border-top:1px
   <aside id="sidebar">
     <div class="brand">
       <div class="mark">Viabilidad 360</div>
-      <div class="sub">Restaurantes · v1.4</div>
+      <div class="sub">Restaurantes · v1.5</div>
     </div>
     <nav class="navlist" id="navlist">
       <button data-view="dashboard" class="active">📊 Panel principal</button>
@@ -303,6 +303,7 @@ footer.savebar{position:sticky;bottom:0;background:var(--tarjeta);border-top:1px
           <p id="dashSub">Resumen de viabilidad del periodo analizado.</p>
         </div>
         <div id="alertaCritica"></div>
+        <div id="fc_proyeccionDashboard"></div>
         <div id="estadoBanner"></div>
         <div class="kpi-grid" id="kpiGrid"></div>
         <div class="card">
@@ -955,15 +956,24 @@ function foodCostSinIngresar(a){
 function renderFoodCostProyeccion(){
   const a = current();
   const card = document.getElementById('fc_proyeccionCard');
-  if(!foodCostSinIngresar(a)){ card.style.display = 'none'; return; }
+  const dashBox = document.getElementById('fc_proyeccionDashboard');
+  const sinIngresar = foodCostSinIngresar(a);
+  if(!sinIngresar){ card.style.display = 'none'; dashBox.innerHTML = ''; return; }
   const ventasNetas = calcVentasNetas(a.ingresos);
   const totalGastos = calcTotalGastos(a.gastos);
-  if(ventasNetas<=0){ card.style.display = 'none'; return; }
+  if(ventasNetas<=0){ card.style.display = 'none'; dashBox.innerHTML = ''; return; }
   const pesosMax = ventasNetas - totalGastos;
   const pctMax = pesosMax / ventasNetas * 100;
   card.style.display = '';
   document.getElementById('fc_proyeccionPesos').textContent = fmtCOP(Math.max(0, pesosMax));
   document.getElementById('fc_proyeccionPct').textContent = fmtPct(pctMax);
+  dashBox.innerHTML = `<div class="estado-banner equilibrio" style="margin-bottom:16px;">
+    <div class="ico">📐</div>
+    <div class="txt">
+      <strong>Food cost aún no ingresado — proyección al equilibrio</strong>
+      <span>Para no perder dinero este mes, el food cost no debería superar ${fmtCOP(Math.max(0,pesosMax))} (${fmtPct(pctMax)} de las ventas).</span>
+    </div>
+  </div>`;
 }
 
 function renderDashboard(){
