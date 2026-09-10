@@ -246,7 +246,7 @@ footer.savebar{position:sticky;bottom:0;background:var(--tarjeta);border-top:1px
 
 <div id="mobiletopbar">
   <button id="btnOpenNav" aria-label="Abrir menú">☰</button>
-  <span class="mark">Viabilidad 360</span>
+  <span class="mark">Viabilidad 360 · v1.4</span>
 </div>
 <div class="scrim" id="scrim"></div>
 
@@ -254,7 +254,7 @@ footer.savebar{position:sticky;bottom:0;background:var(--tarjeta);border-top:1px
   <aside id="sidebar">
     <div class="brand">
       <div class="mark">Viabilidad 360</div>
-      <div class="sub">Restaurantes</div>
+      <div class="sub">Restaurantes · v1.4</div>
     </div>
     <nav class="navlist" id="navlist">
       <button data-view="dashboard" class="active">📊 Panel principal</button>
@@ -380,6 +380,14 @@ footer.savebar{position:sticky;bottom:0;background:var(--tarjeta);border-top:1px
           <div class="grid2" style="margin-top:14px;">
             <div class="gasto-total-bar"><span>Margen de contribución</span><span class="num-display" id="f_margenPesos">$0</span></div>
             <div class="gasto-total-bar"><span>% de contribución</span><span class="num-display" id="f_margenPct">0,00%</span></div>
+          </div>
+        </div>
+        <div class="card" id="fc_proyeccionCard" style="display:none;border-left:3px solid var(--azul-eq);">
+          <div class="section-title" style="border:none;padding-bottom:0;margin-bottom:8px;">📐 Food cost proyectado (aún no lo has ingresado)</div>
+          <p class="small-note" style="margin:0 0 12px;">Mientras registras el food cost real de este mes, aquí tienes una referencia: el food cost máximo que el negocio podría tener sin generar pérdidas, con las ventas y gastos ya registrados.</p>
+          <div class="grid2">
+            <div class="gasto-total-bar"><span>Food cost máximo para no perder</span><span class="num-display" id="fc_proyeccionPesos">$0</span></div>
+            <div class="gasto-total-bar"><span>Equivalente en %</span><span class="num-display" id="fc_proyeccionPct">0,00%</span></div>
           </div>
         </div>
       </section>
@@ -936,6 +944,28 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<
 /* ============================================================
    6. DASHBOARD
    ============================================================ */
+/* ============================================================
+   6b. FOOD COST PROYECTADO (mientras no se ingresa el real)
+   ============================================================ */
+function foodCostSinIngresar(a){
+  return a.foodcost.modo === 'porcentaje'
+    ? num(a.foodcost.pct) === 0
+    : num(a.foodcost.valor) === 0;
+}
+function renderFoodCostProyeccion(){
+  const a = current();
+  const card = document.getElementById('fc_proyeccionCard');
+  if(!foodCostSinIngresar(a)){ card.style.display = 'none'; return; }
+  const ventasNetas = calcVentasNetas(a.ingresos);
+  const totalGastos = calcTotalGastos(a.gastos);
+  if(ventasNetas<=0){ card.style.display = 'none'; return; }
+  const pesosMax = ventasNetas - totalGastos;
+  const pctMax = pesosMax / ventasNetas * 100;
+  card.style.display = '';
+  document.getElementById('fc_proyeccionPesos').textContent = fmtCOP(Math.max(0, pesosMax));
+  document.getElementById('fc_proyeccionPct').textContent = fmtPct(pctMax);
+}
+
 function renderDashboard(){
   const a = current();
   const r = calcularTodo(a, STATE.config);
@@ -1589,6 +1619,7 @@ function render(){
   pushFormFromState();
   renderGastos();
   renderDashboard();
+  renderFoodCostProyeccion();
   renderParticipacion();
   renderEscenarios();
   renderMetas();
