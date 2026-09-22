@@ -246,7 +246,7 @@ footer.savebar{position:sticky;bottom:0;background:var(--tarjeta);border-top:1px
 
 <div id="mobiletopbar">
   <button id="btnOpenNav" aria-label="Abrir menú">☰</button>
-  <span class="mark">Viabilidad 360 · v1.5</span>
+  <span class="mark">Viabilidad 360 · v1.6</span>
 </div>
 <div class="scrim" id="scrim"></div>
 
@@ -254,7 +254,7 @@ footer.savebar{position:sticky;bottom:0;background:var(--tarjeta);border-top:1px
   <aside id="sidebar">
     <div class="brand">
       <div class="mark">Viabilidad 360</div>
-      <div class="sub">Restaurantes · v1.5</div>
+      <div class="sub">Restaurantes · v1.6</div>
     </div>
     <nav class="navlist" id="navlist">
       <button data-view="dashboard" class="active">📊 Panel principal</button>
@@ -1490,10 +1490,20 @@ function importarDesdeWorkbook(wb){
   a.ingresos.unidad2.ventasTotales = toNum(ing['Unidad 2 — ventas totales (con impuestos y propina) (COP)']);
   a.ingresos.unidad2.ventasNetas = toNum(ing['Unidad 2 — ventas antes de impuestos y sin propina (COP)']);
 
-  const modo = (fc['Modo (PORCENTAJE o VALOR)']||'').toString().trim().toUpperCase();
-  a.foodcost.modo = modo==='VALOR' ? 'valor' : 'porcentaje';
-  a.foodcost.pct = toNum(fc['Porcentaje de food cost (%) — si el modo es PORCENTAJE']);
-  a.foodcost.valor = toNum(fc['Valor food cost en pesos (COP) — si el modo es VALOR']);
+  const modoTexto = (fc['Modo (PORCENTAJE o VALOR)']||'').toString().trim().toUpperCase();
+  const pctIngresado = toNum(fc['Porcentaje de food cost (%) — si el modo es PORCENTAJE']);
+  const valorIngresado = toNum(fc['Valor food cost en pesos (COP) — si el modo es VALOR']);
+  let modo;
+  if(modoTexto==='VALOR') modo = 'valor';
+  else if(modoTexto==='PORCENTAJE') modo = 'porcentaje';
+  else {
+    // Campo "Modo" dejado en blanco: se detecta solo según cuál de los dos
+    // datos (porcentaje o valor) sí viene diligenciado.
+    modo = (valorIngresado>0 && pctIngresado===0) ? 'valor' : 'porcentaje';
+  }
+  a.foodcost.modo = modo;
+  a.foodcost.pct = pctIngresado;
+  a.foodcost.valor = valorIngresado;
 
   // Gastos: lee toda la hoja Gastos_Operativos fila por fila (Concepto | Valor | Observación)
   const wsG = wb.Sheets['Gastos_Operativos'];
